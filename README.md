@@ -1,105 +1,240 @@
-# Isaac Gym Environments for Legged Robots #
-This repository provides the environment used to train ANYmal (and other robots) to walk on rough terrain using NVIDIA's Isaac Gym.
-It includes all components needed for sim-to-real transfer: actuator network, friction & mass randomization, noisy observations and random pushes during training.  
+# Legged Gym → Isaac Lab 迁移项目
 
-**Maintainer**: Nikita Rudin  
-**Affiliation**: Robotic Systems Lab, ETH Zurich  
-**Contact**: rudinn@ethz.ch  
+本项目将原始的 **legged_gym** (基于 Isaac Gym) 完整迁移到 **NVIDIA Isaac Lab** 框架，实现了四足机器人 ANYmal-C 在平坦地形上的强化学习训练。
 
----
+## 项目概述
 
-### :bell: Announcement (09.01.2024) ###
+### 实现功能
 
-With the shift from Isaac Gym to Isaac Sim at NVIDIA, we have migrated all the environments from this work to [Isaac Lab](https://github.com/isaac-sim/IsaacLab). Following this migration, this repository will receive limited updates and support. We encourage all users to migrate to the new framework for their applications.
+- **完整的 ANYmal-C 四足机器人仿真环境**
+- **基于 PPO 算法的强化学习训练** (使用 RSL-RL 库)
+- **多种奖励函数** (速度控制、姿态稳定、能量优化等)
+- **可视化和无头训练模式** (支持 GUI 和纯后台训练)
+- **GPU 加速训练** (RTX 4060 )
 
-Information about this work's locomotion-related tasks in Isaac Lab is available [here](https://isaac-sim.github.io/IsaacLab/main/source/overview/environments.html#locomotion).
+## 迁移过程
 
----
+### 原始环境
 
-### Useful Links ###
+- **原框架**: legged_gym (基于 NVIDIA Isaac Gym Preview)
+- **原 API**: VecTask, Gym-style environment
+- **原资源格式**: URDF + MJF meshes
 
-Project website: https://leggedrobotics.github.io/legged_gym/   
-Paper: https://arxiv.org/abs/2109.11978
+### 目标环境
 
-### Installation ###
-1. Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
-2. Install pytorch 1.10 with cuda-11.3:
-    - `pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html`
-3. Install Isaac Gym
-   - Download and install Isaac Gym Preview 3 (Preview 2 will not work!) from https://developer.nvidia.com/isaac-gym
-   - `cd isaacgym/python && pip install -e .`
-   - Try running an example `cd examples && python 1080_balls_of_solitude.py`
-   - For troubleshooting check docs `isaacgym/docs/index.html`)
-4. Install rsl_rl (PPO implementation)
-   - Clone https://github.com/leggedrobotics/rsl_rl
-   -  `cd rsl_rl && git checkout v1.0.2 && pip install -e .` 
-5. Install legged_gym
-    - Clone this repository
-   - `cd legged_gym && pip install -e .`
+- **新框架**: NVIDIA Isaac Lab (基于 Isaac Sim 4.5)
+- **新 API**: DirectRLEnv, USD-based assets
 
-### CODE STRUCTURE ###
-1. Each environment is defined by an env file (`legged_robot.py`) and a config file (`legged_robot_config.py`). The config file contains two classes: one containing  all the environment parameters (`LeggedRobotCfg`) and one for the training parameters (`LeggedRobotCfgPPo`).  
-2. Both env and config classes use inheritance.  
-3. Each non-zero reward scale specified in `cfg` will add a function with a corresponding name to the list of elements which will be summed to get the total reward.  
-4. Tasks must be registered using `task_registry.register(name, EnvClass, EnvConfig, TrainConfig)`. This is done in `envs/__init__.py`, but can also be done from outside of this repository.  
+### 核心修改内容
 
-### Usage ###
-1. Train:  
-  ```python legged_gym/scripts/train.py --task=anymal_c_flat```
-    -  To run on CPU add following arguments: `--sim_device=cpu`, `--rl_device=cpu` (sim on CPU and rl on GPU is possible).
-    -  To run headless (no rendering) add `--headless`.
-    - **Important**: To improve performance, once the training starts press `v` to stop the rendering. You can then enable it later to check the progress.
-    - The trained policy is saved in `issacgym_anymal/logs/<experiment_name>/<date_time>_<run_name>/model_<iteration>.pt`. Where `<experiment_name>` and `<run_name>` are defined in the train config.
-    -  The following command line arguments override the values set in the config files:
-     - --task TASK: Task name.
-     - --resume:   Resume training from a checkpoint
-     - --experiment_name EXPERIMENT_NAME: Name of the experiment to run or load.
-     - --run_name RUN_NAME:  Name of the run.
-     - --load_run LOAD_RUN:   Name of the run to load when resume=True. If -1: will load the last run.
-     - --checkpoint CHECKPOINT:  Saved model checkpoint number. If -1: will load the last checkpoint.
-     - --num_envs NUM_ENVS:  Number of environments to create.
-     - --seed SEED:  Random seed.
-     - --max_iterations MAX_ITERATIONS:  Maximum number of training iterations.
-2. Play a trained policy:  
-```python legged_gym/scripts/play.py --task=anymal_c_flat```
-    - By default, the loaded policy is the last model of the last run of the experiment folder.
-    - Other runs/model iteration can be selected by setting `load_run` and `checkpoint` in the train config.
+#### 1. 环境基类迁移 (`legged_robot_env.py`)
 
-### Adding a new environment ###
-The base environment `legged_robot` implements a rough terrain locomotion task. The corresponding cfg does not specify a robot asset (URDF/ MJCF) and has no reward scales. 
+**修改项**:
 
-1. Add a new folder to `envs/` with `'<your_env>_config.py`, which inherit from an existing environment cfgs  
-2. If adding a new robot:
-    - Add the corresponding assets to `resources/`.
-    - In `cfg` set the asset path, define body names, default_joint_positions and PD gains. Specify the desired `train_cfg` and the name of the environment (python class).
-    - In `train_cfg` set `experiment_name` and `run_name`
-3. (If needed) implement your environment in <your_env>.py, inherit from an existing environment, overwrite the desired functions and/or add your reward functions.
-4. Register your env in `isaacgym_anymal/envs/__init__.py`.
-5. Modify/Tune other parameters in your `cfg`, `cfg_train` as needed. To remove a reward set its scale to zero. Do not modify parameters of other envs!
+- 从 `VecEnvWrapper` 迁移到 `DirectRLEnv`
+- 重写初始化流程，使用 Isaac Lab 的场景配置
+- 修改观测空间和动作空间定义
+- 实现 Isaac Lab 的 reset 机制 (`_reset_idx()`)
+- 修改 step 函数返回值 (5-tuple → 4-tuple)
+- 添加 `dt` 属性和 `action_scale` 参数
+- 修复接触力检测逻辑 (`contact_forces` 初始化)
 
+**关键代码变更**:
 
-### Troubleshooting ###
-1. If you get the following error: `ImportError: libpython3.8m.so.1.0: cannot open shared object file: No such file or directory`, do: `sudo apt install libpython3.8`. It is also possible that you need to do `export LD_LIBRARY_PATH=/path/to/libpython/directory` / `export LD_LIBRARY_PATH=/path/to/conda/envs/your_env/lib`(for conda user. Replace /path/to/ to the corresponding path.).
-
-### Known Issues ###
-1. The contact forces reported by `net_contact_force_tensor` are unreliable when simulating on GPU with a triangle mesh terrain. A workaround is to use force sensors, but the force are propagated through the sensors of consecutive bodies resulting in an undesirable behaviour. However, for a legged robot it is possible to add sensors to the feet/end effector only and get the expected results. When using the force sensors make sure to exclude gravity from the reported forces with `sensor_options.enable_forward_dynamics_forces`. Example:
+```python
+# 旧 API (Isaac Gym)
+class LeggedRobot(VecTask):
+    def reset(self):
+        # 使用 Gym API
+  
+# 新 API (Isaac Lab)  
+class LeggedRobotEnv(DirectRLEnv):
+    def _reset_idx(self, env_ids):
+        # 使用 Isaac Lab 的重置机制
+        self._robot.write_root_pose_to_sim(root_pose, env_ids)
+        self._robot.write_joint_state_to_sim(joint_pos, joint_vel, env_ids)
 ```
-    sensor_pose = gymapi.Transform()
-    for name in feet_names:
-        sensor_options = gymapi.ForceSensorProperties()
-        sensor_options.enable_forward_dynamics_forces = False # for example gravity
-        sensor_options.enable_constraint_solver_forces = True # for example contacts
-        sensor_options.use_world_frame = True # report forces in world frame (easier to get vertical components)
-        index = self.gym.find_asset_rigid_body_index(robot_asset, name)
-        self.gym.create_asset_force_sensor(robot_asset, index, sensor_pose, sensor_options)
-    (...)
 
-    sensor_tensor = self.gym.acquire_force_sensor_tensor(self.sim)
-    self.gym.refresh_force_sensor_tensor(self.sim)
-    force_sensor_readings = gymtorch.wrap_tensor(sensor_tensor)
-    self.sensor_forces = force_sensor_readings.view(self.num_envs, 4, 6)[..., :3]
-    (...)
+#### 2. 配置文件重构 (`legged_robot_cfg.py`)
 
-    self.gym.refresh_force_sensor_tensor(self.sim)
-    contact = self.sensor_forces[:, :, 2] > 1.
+**修改项**:
+
+- 从单一配置类拆分为 `EnvCfg` + `EventCfg` + `RewardsCfg` 等
+- 执行器配置: `ImplicitActuatorCfg` → `DCMotorCfg`
+- 添加 Isaac Lab 风格的传感器配置 (`ContactSensorCfg`)
+- 重写观测空间和动作空间配置
+- 调整奖励函数权重初始化顺序
+
+**配置结构变化**:
+
+```python
+# 旧结构
+class LeggedRobotCfg:
+    env: EnvCfg
+    terrain: TerrainCfg
+    # 所有配置在一个类中
+
+# 新结构
+@configclass
+class LeggedRobotEnvCfg(DirectRLEnvCfg):
+    # 场景配置
+    scene: MySceneCfg = MySceneCfg(num_envs=4096, env_spacing=2.5)
+    # 观测配置
+    observations: ObservationsCfg = ObservationsCfg()
+    # 动作配置
+    actions: ActionsCfg = ActionsCfg()
+    # 奖励配置
+    rewards: RewardsCfg = RewardsCfg()
+    # 事件配置
+    events: EventCfg = EventCfg()
 ```
+
+#### 3. 训练脚本适配 (`train.py`)
+
+**修改项**:
+
+- 环境包装器适配 RSL-RL 接口
+- 修复观测和动作缓冲区访问
+- 添加日志目录自动创建
+- 适配 GPU/CPU 设备选择
+
+**包装器实现**:
+
+```python
+class RslRlVecEnvWrapper(gym.Wrapper):
+    """包装 Isaac Lab 环境以兼容 RSL-RL"""
+    def __init__(self, env):
+        super().__init__(env)
+        self.num_envs = self.unwrapped.num_envs
+        self.device = self.unwrapped.device
+        self.num_obs = self.unwrapped.observation_space.shape[1]
+        self.num_actions = self.unwrapped.action_space.shape[1]
+```
+
+#### 4. assets和机器人配置
+
+**修改项**:
+
+- URDF 资源路径适配
+- 关节和执行器映射更新
+
+#### 5. 其他修改
+
+ **API 兼容性修复**:
+
+- `self.num_actions` → `self.unwrapped.num_actions`
+- `self.gravity_vec` → `self.scene.env_origins` (重力向量获取)
+- `self.commands` → 命令缓冲区初始化
+- 奖励缩放因子初始化顺序调整
+- 观测缓冲区和动作缓冲区访问路径修正
+
+## 使用环境
+
+### 硬件配置
+
+- **GPU**: NVIDIA GeForce RTX 4060 Laptop 8GB VRAM
+- **训练模式**: GPU 模式 (CUDA 加速)
+
+### 软件环境
+
+- **操作系统**: Windows 11
+- **Isaac Sim**: 4.5.0
+- **Isaac Lab**: 最新版本
+- **Python**: 3.10
+- **关键依赖**:
+  - `omni.isaac.lab` - Isaac Lab 核心库
+  - `rsl_rl` - RSL 强化学习库
+  - `torch` - PyTorch 深度学习框架
+  - `tensorboard` - 训练可视化工具
+
+## 训练模式
+
+#### 无可视化训练
+
+```powershell
+.\train_headless.ps1
+```
+
+#### 可视化训练
+
+```powershell
+.\train_with_visualization.ps1
+```
+
+### 训练结果
+
+所有训练结果保存在 `result/` 文件夹中
+
+## 项目结构
+
+```
+legged_gym/
+├── legged_gym_isaaclab/              # Isaac Lab 扩展 (核心代码)
+│   ├── __init__.py                   # 扩展入口
+│   ├── extension.toml                # 扩展配置
+│   ├── scripts/
+│   │   └── train.py                  # 训练脚本 (包含 RSL-RL 包装器)
+│   └── tasks/
+│       └── locomotion/
+│           ├── __init__.py           # 任务注册
+│           ├── legged_robot_cfg.py   # 环境配置 (奖励、观测、动作)
+│           └── legged_robot_env.py   # 环境实现 (核心逻辑)
+│
+├── resources/                         # 机器人资产
+│   ├── robots/
+│   │   └── anymal_c/
+│   │       ├── urdf/anymal_c.urdf    # 机器人模型
+│   │       └── meshes/               # 3D 网格文件
+│   └── actuator_nets/                # 执行器神经网络
+│
+├── result/                            # 训练结果 (模型检查点和TensorBoard日志)
+│
+├── train_headless.ps1                 # 无可视化训练脚本
+├── train_with_visualization.ps1       # 可视化训练脚本
+└── README.md                          # 本文件
+```
+
+## 配置说明
+
+### 环境参数 (`legged_robot_cfg.py`)
+
+```python
+# 场景配置
+scene.num_envs = 4              # 并行环境数量 (影响训练速度)
+scene.env_spacing = 2.5         # 环境间距 (米)
+
+# 仿真参数
+decimation = 4                  # 控制频率降采样 (仿真步数/控制步数)
+episode_length_s = 20           # 回合时长 (秒)
+
+# 动作参数
+action_scale = 0.25             # 动作缩放因子
+```
+
+### 奖励函数配置
+
+所有奖励函数及其权重在 `RewardsCfg` 中定义:
+
+| 奖励项            | 权重     | 说明                        |
+| ----------------- | -------- | --------------------------- |
+| `lin_vel_z`     | -2.0     | 惩罚垂直速度 (鼓励水平移动) |
+| `ang_vel_xy`    | -0.05    | 惩罚身体旋转                |
+| `orientation`   | -0.0     | 惩罚非水平姿态              |
+| `base_height`   | -0.0     | 维持目标高度                |
+| `torques`       | -0.00001 | 惩罚高扭矩 (能量优化)       |
+| `dof_vel`       | -0.0     | 惩罚高关节速度              |
+| `dof_acc`       | -2.5e-7  | 惩罚高关节加速度            |
+| `action_rate`   | -0.01    | 惩罚动作变化率 (平滑运动)   |
+| `collision`     | -1.0     | 惩罚自碰撞                  |
+| `termination`   | -0.0     | 惩罚回合终止                |
+| `feet_air_time` | 1.0      | 奖励足部腾空时间            |
+
+**自定义奖励**: 修改 `legged_robot_cfg.py` 中的 `rewards.scales` 字典。
+
+### 训练超参数
+
+默认 PPO 参数 (适用于 RSL-RL):
+
+- **学习率**: 1e-3
+- **批量大小**: 根据环境数量自动调整
+- **迭代次数**: 100 (可通过脚本参数修改)

@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
+[package]
+title = "Isaac Lab Legged Gym Tasks"
+description = "Legged Gym environments ported to Isaac Lab"
+authors = ["Legged Gym Team", "Migrated by AI"]
+version = "1.0.0"
+
+# Extension dependencies
+[dependencies]
+"isaaclab.lab" = {}
+
+# Main python module for the extension
+[[python.module]]
+name = "legged_gym_isaaclab"
+
+# Exclude some files from publishing
+exclude = ["*.md", "*.git*", "*.vscode*"]

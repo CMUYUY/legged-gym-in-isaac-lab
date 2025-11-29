@@ -1,0 +1,49 @@
+--- git status ---
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   source/isaaclab/isaaclab/utils/assets.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	2.7.0+cu128
+	source/isaaclab/isaaclab/utils/assets.py.backup
+
+no changes added to commit (use "git add" and/or "git commit -a") 
+
+
+--- git diff ---
+diff --git a/source/isaaclab/isaaclab/utils/assets.py b/source/isaaclab/isaaclab/utils/assets.py
+index ef61e9f89a..0de36c49cd 100644
+--- a/source/isaaclab/isaaclab/utils/assets.py
++++ b/source/isaaclab/isaaclab/utils/assets.py
+@@ -183,6 +183,26 @@ Helper functions.
+ 
+ 
+ async def _is_usd_path_available(usd_path: str, timeout: float) -> bool:
++    """Check if USD file is available, prioritizing local cache.
++    
++    **PATCHED**: Skip network check if file exists in local cache.
++    """
++    # Check local cache first (junction points to D:/isaac-cache/ov)
++    import tempfile
++    local_cache = os.path.join(os.path.expanduser("~"), ".cache", "ov")
++    if usd_path.startswith(("http://", "https://")):
++        # Convert URL to local cache path
++        # http://...amazonaws.com/Assets/Isaac/4.5/... -> ~/.cache/ov/Assets/Isaac/4.5/...
++        parts = usd_path.split("/Assets/", 1)
++        if len(parts) == 2:
++            local_path = os.path.join(local_cache, "Assets", parts[1])
++            if os.path.exists(local_path):
++                omni.log.info(f"[PATCH] Found USD in local cache, skipping network check: {local_path}")
++                return True  # File exists locally, skip network check
++            else:
++                omni.log.warn(f"[PATCH] USD not in local cache: {local_path}, will check network")
++    # Original network check continues below if not found in cache
++
+     """Checks whether the given USD path is available on the Omniverse Nucleus server.
+ 
+     This function is a asynchronous routine to check the availability of the given USD path on the Omniverse Nucleus server.
