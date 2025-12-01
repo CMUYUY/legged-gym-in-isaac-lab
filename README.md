@@ -132,13 +132,11 @@ class RslRlVecEnvWrapper(gym.Wrapper):
 ### 硬件配置
 
 - **GPU**: NVIDIA GeForce RTX 4060 Laptop 8GB VRAM
-- **训练模式**: GPU 模式 (CUDA 加速)
 
-### 软件环境
+### 环境
 
-- **操作系统**: Windows 11
 - **Isaac Sim**: 4.5.0
-- **Isaac Lab**: 最新版本
+- **Isaac Lab**: 0.47.1
 - **Python**: 3.10
 - **关键依赖**:
   - `omni.isaac.lab` - Isaac Lab 核心库
