@@ -1,6 +1,6 @@
 # Legged Gym → Isaac Lab 迁移项目
 
-本项目将原始的 **legged_gym** (基于 Isaac Gym) 完整迁移到 **NVIDIA Isaac Lab** 框架，实现了四足机器人 ANYmal-C 在平坦地形上的强化学习训练。
+本项目将原始的 **legged_gym**--https://github.com/leggedrobotics/legged_gym (基于 Isaac Gym) 完整迁移到 **NVIDIA Isaac Lab** 框架，实现了四足机器人 ANYmal-C 在崎岖地形上的强化学习训练。
 
 ## 项目概述
 
@@ -9,7 +9,6 @@
 - **完整的 ANYmal-C 四足机器人仿真环境**
 - **基于 PPO 算法的强化学习训练** (使用 RSL-RL 库)
 - **多种奖励函数** (速度控制、姿态稳定、能量优化等)
-- **可视化和无头训练模式** (支持 GUI 和纯后台训练)
 - **GPU 加速训练** (RTX 4060 )
 
 ## 迁移过程
@@ -147,19 +146,6 @@ class RslRlVecEnvWrapper(gym.Wrapper):
   - `torch` - PyTorch 深度学习框架
   - `tensorboard` - 训练可视化工具
 
-## 训练模式
-
-#### 无可视化训练
-
-```powershell
-.\train_headless.ps1
-```
-
-#### 可视化训练
-
-```powershell
-.\train_with_visualization.ps1
-```
 
 ### 训练结果
 
