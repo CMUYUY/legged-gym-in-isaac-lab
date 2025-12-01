@@ -1,4 +1,4 @@
-# Legged Gym → Isaac Lab 迁移项目
+# Legged Gym 迁移项目(From Isaac Gym to Isaac Lab) 
 
 本项目将原始的 **legged_gym**--https://github.com/leggedrobotics/legged_gym (基于 Isaac Gym) 完整迁移到 **NVIDIA Isaac Lab** 框架，实现了四足机器人 ANYmal-C 在崎岖地形上的强化学习训练。
 
